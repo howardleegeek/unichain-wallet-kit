@@ -1,13 +1,16 @@
 // ============================================
-// EVM Module - wagmi Integration
+// EVM Module - wagmi Integration (真实 SDK)
 // ============================================
 
-import { createConfig, http, useConnect, useAccount, useDisconnect, useSignMessage, useSendTransaction, useSwitchChain, useChainId } from 'wagmi'
-import { mainnet, base, arbitrum, polygon } from 'wagmi/chains'
-import { injected } from 'wagmi/connectors'
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
+import { createConfig, http, useAccount, useConnect, useDisconnect, useSignMessage, useSendTransaction, useSwitchChain, useChainId, useBalance, Config } from 'wagmi'
+import { mainnet, base, arbitrum, polygon, sepolia } from 'wagmi/chains'
+import { injected, walletConnect } from 'wagmi/connectors'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react'
 
-// EVM Wallet State
+// ============================================
+// Types
+// ============================================
+
 export interface EvmWalletState {
   isConnected: boolean
   address: string | null
@@ -15,105 +18,192 @@ export interface EvmWalletState {
   balance: string | null
 }
 
-// EVM Config
 export interface EvmConfig {
+  /** WalletConnect Project ID */
   projectId?: string
+  /** Custom chains */
   chains?: typeof import('wagmi/chains').Chain[]
+  /** Enable wallet connect */
+  enableWalletConnect?: boolean
 }
 
-// Default chains
-const defaultChains = [mainnet, base, arbitrum, polygon]
+// ============================================
+// Default Configuration
+// ============================================
 
-// Create wagmi config
-export function createEvmWallet(config: EvmConfig = {}) {
-  const { projectId, chains = defaultChains } = config
+const DEFAULT_CHAINS = [mainnet, base, arbitrum, polygon, sepolia]
 
-  const wagmiConfig = createConfig({
-    chains,
-    connectors: [
-      injected({
-        target: 'metaMask',
-      }),
-    ],
-    transports: {
-      [mainnet.id]: http(),
-      [base.id]: http(),
-      [arbitrum.id]: http(),
-      [polygon.id]: http(),
-    },
-  })
+// Default RPC URLs (free tier)
+const DEFAULT_RPC_URLS: Record<number, string> = {
+  [mainnet.id]: 'https://eth.llamarpc.com',
+  [base.id]: 'https://base.llamarpc.com',
+  [arbitrum.id]: 'https://arb1.arbitrum.io/rpc',
+  [polygon.id]: 'https://polygon.llamarpc.com',
+  [sepolia.id]: 'https://sepolia.infura.io/v3/public',
+}
 
-  return {
-    config: wagmiConfig,
-    chains,
+// ============================================
+// Create EVM Config
+// ============================================
+
+export function createEvmConfig(config: EvmConfig = {}): Config {
+  const { projectId, chains = DEFAULT_CHAINS, enableWalletConnect = true } = config
+
+  const transports = chains.reduce((acc, chain) => {
+    acc[chain.id] = http(DEFAULT_RPC_URLS[chain.id] || chain.rpcUrls.default.http[0])
+    return acc
+  }, {} as Record<number, ReturnType<typeof http>>)
+
+  const connectors = [
+    injected({
+      target: 'metaMask',
+    }),
+    injected({
+      target: 'coinbaseWallet',
+    }),
+  ]
+
+  // Add WalletConnect if projectId provided
+  if (projectId && enableWalletConnect) {
+    connectors.push(
+      walletConnect({
+        projectId,
+        qrModalOptions: {
+          projectId,
+        },
+      })
+    )
   }
+
+  return createConfig({
+    chains,
+    connectors,
+    transports,
+  })
 }
 
-// Context for EVM
-const EvmContext = createContext<{
-  isConnected: boolean
-  address: string | null
-  chainId: number | null
-  connect: () => Promise<void>
+// ============================================
+// Context
+// ============================================
+
+interface EvmContextValue {
+  state: EvmWalletState
+  connect: (connectorId?: string) => Promise<void>
   disconnect: () => Promise<void>
   signMessage: (message: string) => Promise<string>
   sendTransaction: (to: string, value?: string, data?: string) => Promise<string>
   switchChain: (chainId: number) => Promise<void>
-} | null>(null)
+}
 
+const EvmContext = createContext<EvmContextValue | null>(null)
+
+// ============================================
 // Provider
+// ============================================
+
 export interface EvmProviderProps {
   children: ReactNode
   config?: EvmConfig
+  /** Wagmi config - if provided, use external config */
+  wagmiConfig?: Config
 }
 
-export function EvmProvider({ children, config }: EvmProviderProps) {
-  const [mockState, setMockState] = useState({
-    isConnected: false,
-    address: null as string | null,
-    chainId: null as number | null,
+export function EvmProvider({ children, config, wagmiConfig }: EvmProviderProps) {
+  // Account state
+  const { address, isConnected, chainId } = useAccount({ config: wagmiConfig })
+  const { connect: wagmiConnect, connectors } = useConnect({ config: wagmiConfig })
+  const { disconnect: wagmiDisconnect } = useDisconnect({ config: wagmiConfig })
+  const { signMessageAsync } = useSignMessage({ config: wagmiConfig })
+  const { sendTransactionAsync } = useSendTransaction({ config: wagmiConfig })
+  const { switchChain: wagmiSwitchChain } = useSwitchChain({ config: wagmiConfig })
+  
+  // Balance
+  const { data: balanceData } = useBalance({
+    address,
+    config: wagmiConfig,
   })
 
-  const connect = useCallback(async () => {
-    // TODO: Implement actual wagmi connection
-    setMockState({
-      isConnected: true,
-      address: '0x742d35Cc6634C0532925a3b8D4C8db86fB5C4A7E',
-      chainId: 1,
-    })
-  }, [])
+  const state: EvmWalletState = useMemo(() => ({
+    isConnected: isConnected ?? false,
+    address: address ?? null,
+    chainId: chainId ?? null,
+    balance: balanceData ? balanceData.formatted : null,
+  }), [isConnected, address, chainId, balanceData])
 
+  // Connect
+  const connect = useCallback(async (connectorId?: string) => {
+    try {
+      const connector = connectorId 
+        ? connectors.find(c => c.uid === connectorId || c.name.toLowerCase().includes(connectorId.toLowerCase()))
+        : connectors[0]
+      
+      if (connector) {
+        await wagmiConnect({ connector })
+      } else {
+        // Try first available connector
+        await wagmiConnect({ connector: connectors[0] })
+      }
+    } catch (error) {
+      console.error('EVM connect error:', error)
+      throw error
+    }
+  }, [connectors, wagmiConnect])
+
+  // Disconnect
   const disconnect = useCallback(async () => {
-    setMockState({
-      isConnected: false,
-      address: null,
-      chainId: null,
-    })
-  }, [])
+    try {
+      await wagmiDisconnect()
+    } catch (error) {
+      console.error('EVM disconnect error:', error)
+      throw error
+    }
+  }, [wagmiDisconnect])
 
+  // Sign message
   const signMessage = useCallback(async (message: string): Promise<string> => {
-    if (!mockState.isConnected) throw new Error('Not connected')
-    // TODO: Implement actual signing
-    return `signed:${message}`
-  }, [mockState.isConnected])
+    if (!address) throw new Error('Wallet not connected')
+    try {
+      const result = await signMessageAsync({ message })
+      return result
+    } catch (error) {
+      console.error('EVM sign error:', error)
+      throw error
+    }
+  }, [address, signMessageAsync])
 
+  // Send transaction
   const sendTransaction = useCallback(async (
     to: string,
     value?: string,
     data?: string
   ): Promise<string> => {
-    if (!mockState.isConnected) throw new Error('Not connected')
-    // TODO: Implement actual transaction
-    return `tx:${Date.now()}`
-  }, [mockState.isConnected])
+    if (!address) throw new Error('Wallet not connected')
+    try {
+      const result = await sendTransactionAsync({
+        to,
+        value: value ? BigInt(value) : undefined,
+        data: data as `0x${string}` | undefined,
+      })
+      return result
+    } catch (error) {
+      console.error('EVM transaction error:', error)
+      throw error
+    }
+  }, [address, sendTransactionAsync])
 
+  // Switch chain
   const switchChain = useCallback(async (chainId: number) => {
-    setMockState(prev => ({ ...prev, chainId }))
-  }, [])
+    try {
+      await wagmiSwitchChain({ chainId })
+    } catch (error) {
+      console.error('EVM switch chain error:', error)
+      throw error
+    }
+  }, [wagmiSwitchChain])
 
   return (
     <EvmContext.Provider value={{
-      ...mockState,
+      state,
       connect,
       disconnect,
       signMessage,
@@ -125,47 +215,22 @@ export function EvmProvider({ children, config }: EvmProviderProps) {
   )
 }
 
-// React Hook for EVM Wallet
+// ============================================
+// Hook
+// ============================================
+
 export function useEvmWallet() {
-  const { address, isConnected, chainId } = useAccount()
-  const { connect, connectors } = useConnect()
-  const { disconnect } = useDisconnect()
-  const { signMessageAsync } = useSignMessage()
-  const { sendTransactionAsync } = useSendTransaction()
-
-  const connectWallet = async (connectorName?: string) => {
-    const connector = connectorName 
-      ? connectors.find(c => c.name.toLowerCase().includes(connectorName.toLowerCase()))
-      : connectors[0]
-    if (connector) {
-      await connect({ connector })
-    }
+  const context = useContext(EvmContext)
+  if (!context) {
+    throw new Error('useEvmWallet must be used within EvmProvider')
   }
-
-  const signMessage = async (message: string): Promise<string> => {
-    return signMessageAsync({ message })
-  }
-
-  const sendTransaction = async (to: string, value?: string, data?: string): Promise<string> => {
-    return sendTransactionAsync({
-      to,
-      value: value ? BigInt(value) : undefined,
-      data: data as `0x${string}` | undefined,
-    })
-  }
-
-  return {
-    isConnected,
-    address,
-    chainId,
-    connect: connectWallet,
-    disconnect,
-    signMessage,
-    sendTransaction,
-  }
+  return context
 }
 
+// ============================================
 // Re-export wagmi hooks for advanced use
+// ============================================
+
 export {
   useAccount,
   useConnect,
@@ -174,4 +239,5 @@ export {
   useSendTransaction,
   useSwitchChain,
   useChainId,
+  useBalance,
 }

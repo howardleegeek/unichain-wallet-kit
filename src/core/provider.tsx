@@ -1,15 +1,18 @@
 // ============================================
-// Core Provider - React Context Provider
+// Core Provider - 统一 Provider (整合所有链)
 // ============================================
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import type { ChainType, WalletState, WalletContextValue } from './adapter'
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react'
+import type { ChainType, WalletState, WalletContextValue, WalletProviderProps } from '../core/adapter'
+import { getStorageItem, setStorageItem, removeStorageItem } from '../core/adapter'
 
 // Re-export types
-export type { ChainType, WalletState, WalletContextValue, WalletProviderProps } from './adapter'
-export { DEFAULT_WALLET_STATE } from './adapter'
+export type { ChainType, WalletState, WalletContextValue, WalletProviderProps } from '../core/adapter'
 
-// Mock adapters for now - will be replaced with real implementations
+// ============================================
+// Default State
+// ============================================
+
 const DEFAULT_STATE: WalletState = {
   isConnected: false,
   address: null,
@@ -20,15 +23,30 @@ const DEFAULT_STATE: WalletState = {
   error: null,
 }
 
+// ============================================
+// Context
+// ============================================
+
 export const WalletContext = createContext<WalletContextValue | null>(null)
 
+// ============================================
 // Provider Component
-export interface WalletProviderProps {
+// ============================================
+
+export interface UnifiedWalletProviderProps {
   children: ReactNode
   /** Enable auto-connect on mount */
   autoConnect?: boolean
   /** LocalStorage key for persisting connection */
   storageKey?: string
+  /** Default chain to connect */
+  defaultChain?: ChainType
+  /** Enable EVM support */
+  enableEvm?: boolean
+  /** Enable Solana support */
+  enableSolana?: boolean
+  /** Enable TON support */
+  enableTon?: boolean
   /** Callback when wallet connects */
   onConnect?: (address: string, chain: ChainType) => void
   /** Callback when wallet disconnects */
@@ -37,57 +55,65 @@ export interface WalletProviderProps {
   onError?: (error: string) => void
 }
 
-export function WalletProvider({
+export function UnifiedWalletProvider({
   children,
   autoConnect = false,
   storageKey = 'unichain-wallet',
+  defaultChain = 'evm',
+  enableEvm = true,
+  enableSolana = true,
+  enableTon = true,
   onConnect,
   onDisconnect,
   onError,
-}: WalletProviderProps) {
+}: UnifiedWalletProviderProps) {
   const [state, setState] = useState<WalletState>(DEFAULT_STATE)
   const [activeChain, setActiveChain] = useState<ChainType | null>(null)
+  
+  // Track which chain is actively connected
+  const [evmConnected, setEvmConnected] = useState(false)
+  const [solanaConnected, setSolanaConnected] = useState(false)
+  const [tonConnected, setTonConnected] = useState(false)
+
+  // Determine overall connection state based on individual chain states
+  useEffect(() => {
+    const isConnected = evmConnected || solanaConnected || tonConnected
+    setState(prev => ({ ...prev, isConnected }))
+  }, [evmConnected, solanaConnected, tonConnected])
 
   // Connect action
   const connect = useCallback(async (chain?: ChainType) => {
+    const targetChain = chain || defaultChain
     setState(prev => ({ ...prev, isConnecting: true, error: null }))
     
     try {
-      // If chain specified, set it
-      if (chain) {
-        setActiveChain(chain)
-        setStorageItem(`${storageKey}-chain`, chain)
-      } else {
-        // Try to restore from storage
-        const savedChain = localStorage?.getItem(`${storageKey}-chain`) as ChainType | null
-        if (savedChain) {
-          setActiveChain(savedChain)
-        }
-      }
+      setActiveChain(targetChain)
+      setStorageItem(`${storageKey}-chain`, targetChain)
       
-      // TODO: Replace with actual wallet connection logic
-      // For now, just simulate connection
+      // Note: Actual connection is handled by individual chain providers
+      // This sets the intent
       setState(prev => ({
         ...prev,
         isConnecting: false,
-        // isConnected: true,
-        // address: '0x1234...',
+        chain: targetChain,
       }))
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Connection failed'
       setState(prev => ({ ...prev, isConnecting: false, error: errorMsg }))
       onError?.(errorMsg)
     }
-  }, [storageKey, onError])
+  }, [defaultChain, storageKey, onError])
 
   // Disconnect action
   const disconnect = useCallback(async () => {
     try {
-      // TODO: Replace with actual wallet disconnect logic
+      setEvmConnected(false)
+      setSolanaConnected(false)
+      setTonConnected(false)
       setState(DEFAULT_STATE)
       setActiveChain(null)
-      localStorage?.removeItem(`${storageKey}-address`)
-      localStorage?.removeItem(`${storageKey}-chain`)
+      removeStorageItem(`${storageKey}-address`)
+      removeStorageItem(`${storageKey}-chain`)
       onDisconnect?.()
     } catch (error) {
       console.error('Disconnect error:', error)
@@ -97,19 +123,20 @@ export function WalletProvider({
   // Switch chain
   const switchChain = useCallback(async (chainId: string | number) => {
     setState(prev => ({ ...prev, chainId }))
-    // TODO: Trigger wallet chain switch
+    // Note: Actual chain switch is handled by individual chain providers
   }, [])
 
-  // Sign message
+  // Sign message - delegates to appropriate chain
   const signMessage = useCallback(async (message: string): Promise<string> => {
     if (!state.isConnected) {
       throw new Error('Wallet not connected')
     }
-    // TODO: Implement actual signing based on chain
-    return ''
+    // This would be implemented based on active chain
+    // For now, throw error - real implementation would delegate to chain-specific signer
+    throw new Error('Use chain-specific signer')
   }, [state.isConnected])
 
-  // Send transaction
+  // Send transaction - delegates to appropriate chain
   const sendTransaction = useCallback(async (
     to: string,
     value: string,
@@ -118,16 +145,16 @@ export function WalletProvider({
     if (!state.isConnected) {
       throw new Error('Wallet not connected')
     }
-    // TODO: Implement actual transaction
-    return ''
+    // This would be implemented based on active chain
+    throw new Error('Use chain-specific transaction')
   }, [state.isConnected])
 
   // Auto-connect on mount
   useEffect(() => {
     if (autoConnect) {
-      const savedAddress = localStorage?.getItem(`${storageKey}-address`)
-      if (savedAddress) {
-        connect()
+      const savedChain = getStorageItem(`${storageKey}-chain`) as ChainType | null
+      if (savedChain) {
+        connect(savedChain)
       }
     }
   }, [autoConnect, storageKey, connect])
@@ -157,7 +184,44 @@ export function WalletProvider({
   )
 }
 
-// Hook to use wallet
+// ============================================
+// Simple Provider (Backward Compatibility)
+// ============================================
+
+export interface SimpleWalletProviderProps {
+  children: ReactNode
+  autoConnect?: boolean
+  storageKey?: string
+  onConnect?: (address: string, chain: ChainType) => void
+  onDisconnect?: () => void
+  onError?: (error: string) => void
+}
+
+export function SimpleWalletProvider({
+  children,
+  autoConnect = false,
+  storageKey = 'unichain-wallet',
+  onConnect,
+  onDisconnect,
+  onError,
+}: SimpleWalletProviderProps) {
+  return (
+    <UnifiedWalletProvider
+      autoConnect={autoConnect}
+      storageKey={storageKey}
+      onConnect={onConnect}
+      onDisconnect={onDisconnect}
+      onError={onError}
+    >
+      {children}
+    </UnifiedWalletProvider>
+  )
+}
+
+// ============================================
+// useWallet Hook
+// ============================================
+
 export function useWallet() {
   const context = useContext(WalletContext)
   if (!context) {

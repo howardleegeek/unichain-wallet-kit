@@ -1,8 +1,8 @@
 // ============================================
-// UI Components - ConnectButton
+// UI Components - ConnectButton (Enhanced)
 // ============================================
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useWallet, formatAddress } from '../core/provider'
 
 // Button Styles
@@ -44,26 +44,26 @@ export interface ConnectButtonProps {
   showChain?: boolean
   /** Custom chain names */
   chainNames?: Record<string, string>
-  /** Theme */
-  variant?: 'primary' | 'secondary' | 'ghost'
   /** Size */
   size?: 'sm' | 'md' | 'lg'
   /** Custom className */
   className?: string
   /** Children */
   children?: React.ReactNode
-  /** On click handler */
+  /** Show disconnect option */
+  showDisconnect?: boolean
+  /** Custom onClick */
   onClick?: () => void
 }
 
 export function ConnectButton({
   showBalance = true,
   showChain = true,
-  chainNames = { evm: 'EVM', solana: 'Solana', ton: 'TON' },
-  variant = 'primary',
+  chainNames = { evm: 'Ethereum', solana: 'Solana', ton: 'TON' },
   size = 'md',
   className = '',
   children,
+  showDisconnect = true,
   onClick,
 }: ConnectButtonProps) {
   const { state, chain, connect, disconnect } = useWallet()
@@ -77,7 +77,7 @@ export function ConnectButton({
   }
 
   const getButtonStyle = () => {
-    const base = {
+    const base: React.CSSProperties = {
       ...buttonStyles,
       ...sizeStyles[size],
     }
@@ -93,7 +93,7 @@ export function ConnectButton({
     return { ...base, ...disconnectedStyles }
   }
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (onClick) {
       onClick()
     }
@@ -103,36 +103,42 @@ export function ConnectButton({
     } else {
       connect()
     }
-  }
+  }, [onClick, isConnected, showDropdown, connect])
 
-  const handleDisconnect = (e: React.MouseEvent) => {
+  const handleDisconnect = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     disconnect()
     setShowDropdown(false)
-  }
+  }, [disconnect])
 
   // Render connected state
   if (isConnected && address) {
     return (
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
         <button
           className={className}
           style={getButtonStyle()}
           onClick={handleClick}
           disabled={isConnecting}
         >
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+          <span style={{ 
+            width: '8px', 
+            height: '8px', 
+            borderRadius: '50%', 
+            backgroundColor: '#22c55e',
+            flexShrink: 0,
+          }} />
           {showChain && chain && (
-            <span style={{ opacity: 0.7 }}>{chainNames[chain]}</span>
+            <span style={{ opacity: 0.7 }}>{chainNames[chain] || chain}</span>
           )}
-          <span>{formatAddress(address)}</span>
+          <span style={{ fontFamily: 'monospace' }}>{formatAddress(address)}</span>
           {showBalance && balance && (
             <span style={{ opacity: 0.7 }}>· {balance}</span>
           )}
         </button>
         
         {/* Dropdown menu */}
-        {showDropdown && (
+        {showDropdown && showDisconnect && (
           <div
             style={{
               position: 'absolute',
@@ -190,7 +196,63 @@ export function ConnectButton({
           }} />
           Connecting...
         </>
+      ) : error ? (
+        <>
+          ⚠️ Retry
+        </>
       ) : children || 'Connect Wallet'}
+    </button>
+  )
+}
+
+// ============================================
+// Mini Connect Button (更简洁)
+// ============================================
+
+export interface MiniConnectButtonProps {
+  className?: string
+}
+
+export function MiniConnectButton({ className = '' }: MiniConnectButtonProps) {
+  const { state, connect } = useWallet()
+  
+  if (state.isConnected && state.address) {
+    return (
+      <button
+        className={className}
+        onClick={connect}
+        style={{
+          padding: '6px 12px',
+          borderRadius: '6px',
+          border: '1px solid #333',
+          backgroundColor: '#1a1a2e',
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontFamily: 'monospace',
+        }}
+      >
+        {formatAddress(state.address, 3)}
+      </button>
+    )
+  }
+  
+  return (
+    <button
+      className={className}
+      onClick={connect}
+      style={{
+        padding: '6px 12px',
+        borderRadius: '6px',
+        border: 'none',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontWeight: 600,
+      }}
+    >
+      Connect
     </button>
   )
 }

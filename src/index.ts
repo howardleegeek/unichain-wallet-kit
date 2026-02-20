@@ -2,9 +2,11 @@
 // unichain-wallet-kit - Unified Multi-Chain Wallet SDK
 // ============================================
 
-// Core
+// Core Provider
 export { 
-  WalletProvider, 
+  WalletProvider,
+  UnifiedWalletProvider,
+  SimpleWalletProvider,
   useWallet, 
   useWalletState,
   useIsConnected,
@@ -12,11 +14,13 @@ export {
   useChain,
   WalletContext,
   type WalletProviderProps,
+  type UnifiedWalletProviderProps,
   type ChainType,
   type WalletState,
   type WalletContextValue,
 } from './core/provider'
 
+// Core Utilities
 export {
   DEFAULT_WALLET_STATE,
   getStorageItem,
@@ -24,22 +28,76 @@ export {
   removeStorageItem,
   formatAddress,
   formatBalance,
+  SUPPORTED_CHAINS,
+  CHAIN_NAMES,
+  type ChainInfo,
   type IWalletAdapter,
   type WalletCapabilities,
 } from './core/adapter'
 
+// ============================================
 // UI Components
-export { ConnectButton, type ConnectButtonProps } from './ui/ConnectButton'
+// ============================================
+
+export { ConnectButton, MiniConnectButton, type ConnectButtonProps } from './ui/ConnectButton'
 export { ChainSelector, SUPPORTED_CHAINS, type ChainSelectorProps, type ChainInfo } from './ui/ChainSelector'
 
+// ============================================
 // EVM Module
-export type { EvmConfig, EvmProviderProps } from './evm'
+// ============================================
 
-// Solana Module  
-export type { SolanaConfig, SolanaProviderProps } from './solana'
+export {
+  EvmProvider,
+  useEvmWallet,
+  createEvmConfig,
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useSignMessage,
+  useSendTransaction,
+  useSwitchChain,
+  useChainId,
+  useBalance,
+  type EvmConfig,
+  type EvmProviderProps,
+  type EvmWalletState,
+} from './evm'
 
+// ============================================
+// Solana Module
+// ============================================
+
+export {
+  SolanaProvider,
+  SolanaWalletProvider,
+  useSolanaWallet,
+  useWallet as useSolanaUseWallet,
+  useConnection,
+  useAnchorWallet,
+  Connection,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  type SolanaConfig,
+  type SolanaProviderProps,
+  type SolanaWalletProviderProps,
+  type SolanaWalletState,
+} from './solana'
+
+// ============================================
 // TON Module
-export type { TonConfig, TonProviderProps } from './ton'
+// ============================================
+
+export {
+  TonProvider,
+  useTonWallet,
+  TonConnect,
+  isTelegramUrl,
+  type TonConfig,
+  type TonProviderProps,
+  type TonWalletState,
+} from './ton'
 
 // ============================================
 // Version
@@ -54,14 +112,11 @@ export const VERSION = '1.0.0'
 export const DEFAULT_CONFIG = {
   storageKey: 'unichain-wallet',
   autoConnect: false,
+  defaultChain: 'evm' as ChainType,
   supportedChains: ['evm', 'solana', 'ton'] as ChainType[],
-}
-
-// Chain names
-export const CHAIN_NAMES: Record<ChainType, string> = {
-  evm: 'EVM',
-  solana: 'Solana',
-  ton: 'TON',
+  enableEvm: true,
+  enableSolana: true,
+  enableTon: true,
 }
 
 // ============================================
