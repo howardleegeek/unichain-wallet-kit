@@ -1,7 +1,7 @@
 {
   "name": "unichain-wallet-kit",
   "version": "1.0.0",
-  "description": "Unified multi-chain wallet SDK - EVM, Solana, TON",
+  "description": "Unified multi-chain wallet SDK - EVM, Solana, TON, Aptos, Sui + AI Agent + Passkeys + x402",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -46,13 +46,23 @@
     "ethereum",
     "solana",
     "ton",
+    "aptos",
+    "sui",
     "web3",
     "crypto",
     "react",
-    "wagmi"
+    "wagmi",
+    "passkeys",
+    "webauthn",
+    "agent",
+    "ai-agent",
+    "x402",
+    "erc4337",
+    "account-abstraction",
+    "embedded-wallet"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/oyster-labs/unichain-wallet-kit"
+    "url": "https://github.com/howardleegeek/unichain-wallet-kit"
   }
 }

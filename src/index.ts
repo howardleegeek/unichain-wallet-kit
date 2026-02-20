@@ -155,6 +155,81 @@ export {
 } from './agent/x402'
 
 // ============================================
+// Passkeys Module
+// ============================================
+
+export {
+  PasskeyProvider,
+  usePasskeys,
+  isWebAuthnSupported,
+  generateChallenge,
+  verifySignature,
+  storeCredential,
+  getStoredCredentials,
+  clearCredentials,
+  type PasskeyProviderProps,
+  type PasskeyCredential,
+  type PasskeyRegistrationOptions,
+  type PasskeyAuthenticationOptions,
+  type PasskeyAuthenticationResult,
+  type PasskeyState,
+  type PasskeyConfig,
+} from './passkeys'
+
+// ============================================
+// Paymaster Module (ERC-4337)
+// ============================================
+
+export {
+  PaymasterProvider,
+  usePaymaster,
+  PaymasterClient,
+  createPaymasterConfig,
+  type PaymasterProviderProps,
+  type PaymasterChain,
+  type PaymasterConfig,
+  type PaymasterPolicy,
+  type UserOperation,
+  type UserOperationResult,
+  type SendUserOperationOptions,
+} from './paymaster'
+
+// ============================================
+// Aptos Module
+// ============================================
+
+export {
+  AptosProvider,
+  useAptosWallet,
+  getAccountResources,
+  getBalance,
+  submitTransaction,
+  type AptosProviderProps,
+  type AptosNetwork,
+  type AptosConfig,
+  type AptosWalletState,
+  type AptosTransactionOptions,
+  type AptosTransactionResult,
+} from './aptos'
+
+// ============================================
+// Sui Module
+// ============================================
+
+export {
+  SuiProvider,
+  useSuiWallet,
+  getCoins,
+  getBalance as getSuiBalance,
+  executeTransaction,
+  type SuiProviderProps,
+  type SuiNetwork,
+  type SuiConfig,
+  type SuiWalletState,
+  type SuiTransactionResult,
+} from './sui'
+
+// ============================================
 // Version
 // ============================================
 
@@ -168,10 +243,12 @@ export const DEFAULT_CONFIG = {
   storageKey: 'unichain-wallet',
   autoConnect: false,
   defaultChain: 'evm' as ChainType,
-  supportedChains: ['evm', 'solana', 'ton'] as ChainType[],
+  supportedChains: ['evm', 'solana', 'ton', 'aptos', 'sui'] as ChainType[],
   enableEvm: true,
   enableSolana: true,
   enableTon: true,
+  enableAptos: true,
+  enableSui: true,
 }
 
 // ============================================
