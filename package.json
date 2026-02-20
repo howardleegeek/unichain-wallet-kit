@@ -1,7 +1,7 @@
 {
   "name": "unichain-wallet-kit",
   "version": "1.0.0",
-  "description": "Unified multi-chain wallet SDK - EVM, Solana, TON, Aptos, Sui + AI Agent + Passkeys + x402",
+  "description": "Unified multi-chain wallet SDK - EVM, Solana, TON, Aptos, Sui + AI Agent + Passkeys + x402 + Lit Protocol",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -54,12 +54,20 @@
     "wagmi",
     "passkeys",
     "webauthn",
-    "agent",
-    "ai-agent",
-    "x402",
     "erc4337",
     "account-abstraction",
-    "embedded-wallet"
+    "embedded-wallet",
+    "ai-agent",
+    "x402",
+    "lit-protocol",
+    "thegraph",
+    "defi",
+    "uniswap",
+    "aave",
+    "push-protocol",
+    "notifications",
+    "mpc",
+    "key-management"
   ],
   "repository": {
     "type": "git",

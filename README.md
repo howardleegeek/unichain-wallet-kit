@@ -1,31 +1,54 @@
 # unichain-wallet-kit
 
-> 统一的多链钱包 SDK - EVM + Solana + TON
+> Unified Multi-Chain Wallet SDK - EVM + Solana + TON + Aptos + Sui + AI Agent + Passkeys
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
+[![npm version](https://img.shields.io/npm/v/unichain-wallet-kit)](https://www.npmjs.com/package/unichain-wallet-kit)
 
-## 特性
+## Features
 
-- ✅ **统一 API** - 一个 hook 搞定所有链
-- ✅ **EVM 支持** - Ethereum, Base, Arbitrum, Polygon
-- ✅ **Solana 支持** - Phantom, Solflare
-- ✅ **TON 支持** - Tonkeeper, TON Wallet
-- ✅ **SSR 安全** - Next.js 完美兼容
-- ✅ **自动重连** - 记住上次连接
-- ✅ **UI 组件** - 开箱即用的按钮和选择器
-- ✅ **TypeScript** - 完整类型定义
+### Multi-Chain Support
+- ✅ **EVM** - Ethereum, Base, Arbitrum, Polygon, Optimism, Avalanche, BSC
+- ✅ **Solana** - Phantom, Solflare, Slope
+- ✅ **TON** - Tonkeeper, TON Wallet
+- ✅ **Aptos** - Petra Wallet
+- ✅ **Sui** - Sui Wallet, Suiet
 
-## 安装
+### AI Agent
+- ✅ **Agent Wallet** - Programmable wallets for AI agents
+- ✅ **Policy System** - Spending limits and allowances
+- ✅ **x402 Payments** - Micropayment protocol for AI agents
+- ✅ **ERC-4337 Paymaster** - Gasless transactions
+- ✅ **LangChain Tools** - Blockchain actions for AI agents
+
+### Security
+- ✅ **Passkeys/WebAuthn** - Passwordless authentication
+- ✅ **Lit Protocol** - Decentralized key management (MPC)
+- ✅ **Session Keys** - Temporary signing permissions
+
+### Developer Experience
+- ✅ **Unified API** - One hook for all chains
+- ✅ **SSR Safe** - Next.js compatible
+- ✅ **Auto Reconnect** - Remembers last connection
+- ✅ **UI Components** - Ready-to-use buttons and selectors
+- ✅ **TypeScript** - Full type definitions
+
+### Data & Infrastructure
+- ✅ **The Graph** - Blockchain data indexing
+- ✅ **Push Protocol** - Web3 notifications
+- ✅ **ENS** - Ethereum Name Service
+
+## Installation
 
 ```bash
 npm install unichain-wallet-kit
 ```
 
-## 快速开始
+## Quick Start
 
-### 1. 包裹 Provider
+### 1. Wrap with Provider
 
 ```tsx
 import { WalletProvider } from 'unichain-wallet-kit'
@@ -39,7 +62,7 @@ export default function App() {
 }
 ```
 
-### 2. 使用 Hook
+### 2. Use Hook
 
 ```tsx
 import { useWallet, ConnectButton } from 'unichain-wallet-kit'
@@ -60,167 +83,144 @@ function MyComponent() {
 }
 ```
 
-## API
+## API Reference
 
-### Provider
+### Core
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `autoConnect` | `boolean` | `false` | 启动时自动连接 |
-| `storageKey` | `string` | `unichain-wallet` | localStorage 键名 |
-| `onConnect` | `function` | - | 连接回调 |
-| `onDisconnect` | `function` | - | 断开回调 |
-| `onError` | `function` | - | 错误回调 |
+| Component | Description |
+|-----------|-------------|
+| `WalletProvider` | Main provider for wallet connection |
+| `useWallet()` | Hook to access wallet state and actions |
+| `ConnectButton` | Ready-to-use connect button |
+| `ChainSelector` | Chain selector component |
 
-### useWallet
+### Chain Modules
 
-| 返回值 | 类型 | 描述 |
-|--------|------|------|
-| `state` | `WalletState` | 钱包状态 |
-| `chain` | `ChainType` | 当前链 |
-| `connect` | `function` | 连接钱包 |
-| `disconnect` | `function` | 断开连接 |
-| `switchChain` | `function` | 切换链 |
-| `signMessage` | `function` | 签名消息 |
-| `sendTransaction` | `function` | 发送交易 |
+| Module | Chain | Usage |
+|--------|-------|-------|
+| `EvmProvider` | EVM Chains | `import { EvmProvider, useEvmWallet } from 'unichain-wallet-kit'` |
+| `SolanaProvider` | Solana | `import { SolanaProvider, useSolanaWallet } from 'unichain-wallet-kit'` |
+| `TonProvider` | TON | `import { TonProvider, useTonWallet } from 'unichain-wallet-kit'` |
+| `AptosProvider` | Aptos | `import { AptosProvider, useAptosWallet } from 'unichain-wallet-kit'` |
+| `SuiProvider` | Sui | `import { SuiProvider, useSuiWallet } from 'unichain-wallet-kit'` |
 
-### WalletState
-
-```ts
-interface WalletState {
-  isConnected: boolean
-  address: string | null
-  chain: 'evm' | 'solana' | 'ton' | null
-  chainId: string | number | null
-  balance: string | null
-  isConnecting: boolean
-  error: string | null
-}
-```
-
-## UI 组件
-
-### ConnectButton
+### AI Agent
 
 ```tsx
-import { ConnectButton } from 'unichain-wallet-kit'
+import { AgentWalletProvider, useAgentWallet, createDefaultPolicy } from 'unichain-wallet-kit'
 
-// 简单用法
-<ConnectButton />
+// Create policy
+const policy = createDefaultPolicy('10', '1000') // $10/transaction, $1000/day
 
-// 自定义
-<ConnectButton 
-  showBalance={true}
-  showChain={true}
-  size="lg"
-  variant="primary"
-/>
+// Initialize agent wallet
+await initialize({
+  agentId: 'my-ai-agent',
+  chain: 'evm',
+  policy,
+})
+
+// Agent can execute transactions
+await transfer('0x123...', '10', 'USDC')
 ```
 
-### ChainSelector
+### Passkeys
 
 ```tsx
-import { ChainSelector } from 'unichain-wallet-kit'
+import { PasskeyProvider, usePasskeys } from 'unichain-wallet-kit'
 
-<ChainSelector 
-  onChainChange={(chain) => console.log(chain)}
-/>
+// Register
+await register('username')
+
+// Authenticate
+await authenticate()
 ```
 
-## 示例
-
-### 完整页面
+### ERC-4337 Paymaster
 
 ```tsx
-import { WalletProvider, useWallet, ConnectButton } from 'unichain-wallet-kit'
+import { PaymasterProvider, usePaymaster, createPaymasterConfig } from 'unichain-wallet-kit'
 
-export default function NFTPage() {
-  return (
-    <WalletProvider>
-      <NFTCard />
-    </WalletProvider>
-  )
-}
-
-function NFTCard() {
-  const { state, sendTransaction } = useWallet()
-  
-  const handleBuy = async () => {
-    try {
-      const txHash = await sendTransaction('0x...', '0.1')
-      alert(`Success! ${txHash}`)
-    } catch (error) {
-      alert('Failed: ' + error.message)
-    }
-  }
-  
-  return (
-    <div>
-      <h1>NFT #123</h1>
-      <p>Price: 0.1 ETH</p>
-      
-      {state.isConnected ? (
-        <button onClick={handleBuy}>Buy Now</button>
-      ) : (
-        <ConnectButton />
-      )}
-    </div>
-  )
-}
+// Gasless transaction
+await sendUserOperation({
+  to: '0x...',
+  value: '0.01',
+})
 ```
 
-## 支持的链
-
-| 链 | 类型 | 状态 |
-|-----|------|------|
-| Ethereum | EVM | ✅ |
-| Base | EVM | ✅ |
-| Arbitrum | EVM | ✅ |
-| Polygon | EVM | ✅ |
-| Solana | Solana | ✅ |
-| TON | TON | ✅ |
-
-## 错误处理
+### x402 Payments
 
 ```tsx
-const handleTx = async () => {
-  try {
-    await sendTransaction(to, amount)
-  } catch (error) {
-    switch (error.code) {
-      case 4001:
-        alert('User rejected')
-        break
-      case -32000:
-        alert('Insufficient funds')
-        break
-      default:
-        alert('Transaction failed')
-    }
-  }
-}
+import { X402Provider, useX402 } from 'unichain-wallet-kit'
+
+// AI agent paying for API access
+const response = await x402Client.fetchWithPayment('https://api.example.com/data')
 ```
 
-## SSR / Next.js
+## Supported Chains
 
-```tsx
-// 动态导入避免 SSR 问题
-import dynamic from 'next/dynamic'
+| Chain | Status |
+|-------|--------|
+| Ethereum | ✅ |
+| Base | ✅ |
+| Arbitrum | ✅ |
+| Optimism | ✅ |
+| Polygon | ✅ |
+| Avalanche | ✅ |
+| BSC | ✅ |
+| Solana | ✅ |
+| TON | ✅ |
+| Aptos | ✅ |
+| Sui | ✅ |
 
-const WalletButton = dynamic(
-  () => import('./WalletButton'),
-  { ssr: false }
-)
+## Comparison
+
+| Feature | Openfort | Coinbase | 0xGasless | **unichain-wallet-kit** |
+|---------|----------|----------|-----------|------------------------|
+| EVM | ✅ | ✅ | ✅ | ✅ |
+| Solana | ⚠️ | ❌ | ❌ | ✅ |
+| TON | ❌ | ❌ | ❌ | ✅ |
+| Aptos/Sui | ❌ | ❌ | ❌ | ✅ |
+| Passkeys | ⚠️ | ✅ | ❌ | ✅ |
+| x402 | ❌ | ✅ | ✅ | ✅ |
+| AI Agent | ⚠️ | ✅ | ✅ | ✅ |
+| **Price** | $99/mo | Paid | Paid | **Free** |
+
+## Architecture
+
+```
+unichain-wallet-kit
+├── src/
+│   ├── core/           # Core types & provider
+│   ├── evm/           # EVM (wagmi)
+│   ├── solana/        # Solana (wallet-adapter)
+│   ├── ton/           # TON (TonConnect)
+│   ├── aptos/         # Aptos
+│   ├── sui/           # Sui
+│   ├── agent/         # AI Agent + x402
+│   ├── passkeys/      # WebAuthn
+│   ├── paymaster/     # ERC-4337
+│   ├── lit/           # Lit Protocol (MPC)
+│   ├── graph/         # The Graph
+│   ├── push/          # Push Protocol
+│   ├── identity/      # ENS
+│   ├── defi/          # DeFi integrations
+│   └── ui/            # UI components
+└── examples/          # Usage examples
 ```
 
-## Codex 集成
+## Contributing
 
-See [prompts/codex-prompts.md](prompts/codex-prompts.md) for Codex integration guide.
+Contributions are welcome! Please read our [contributing guide](CONTRIBUTING.md) first.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## 贡献
+## Keywords
 
-欢迎提交 Issue 和 PR！
+```
+wallet ethereum solana ton apts sui web3 crypto react 
+passkeys webauthn erc4337 account-abstraction 
+embedded-wallet ai-agent x402 lit-protocol 
+thegraph defi uniswap aave
+```
