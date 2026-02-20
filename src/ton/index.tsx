@@ -1,10 +1,9 @@
 // ============================================
-// TON Module - TonConnect (真实 SDK)
+// TON Module - Real TonConnect Integration
 // ============================================
 
-import { useState, useEffect, useCallback, useMemo, ReactNode, createContext, useContext } from 'react'
-import { TonConnect, TonConnectSDK, isTelegramUrl } from '@tonconnect/sdk'
-import { SendTransactionRequest } from '@tonconnect/sdk'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
+import { TonConnect, isTelegramUrl } from '@tonconnect/sdk'
 
 // ============================================
 // Types
@@ -14,7 +13,6 @@ export interface TonWalletState {
   isConnected: boolean
   address: string | null
   balance: string | null
-  chain: string
 }
 
 export interface TonConfig {
@@ -22,7 +20,7 @@ export interface TonConfig {
 }
 
 // ============================================
-// Default Manifest
+// Default Config
 // ============================================
 
 const DEFAULT_MANIFEST = {
@@ -30,10 +28,6 @@ const DEFAULT_MANIFEST = {
   name: 'Your DApp',
   iconUrl: 'https://your-dapp.com/icon.png',
 }
-
-// ============================================
-// Singleton Instance
-// ============================================
 
 let tonInstance: TonConnect | null = null
 
@@ -55,7 +49,7 @@ interface TonContextValue {
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   signMessage: (message: string) => Promise<string>
-  sendTransaction: (to: string, amount: string) => Promise<string>
+  sendTON: (to: string, amount: string) => Promise<string>
 }
 
 const TonContext = createContext<TonContextValue | null>(null)
@@ -75,72 +69,47 @@ export function TonProvider({ children, config }: TonProviderProps) {
   const [balance, setBalance] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
-  // Listen for wallet changes
+  // Check connection status periodically
   useEffect(() => {
-    const unsubscribe = ton.on('change', async (wallet) => {
-      if (wallet) {
-        setAddress(wallet.account.address)
+    // Check initial connection status
+    const checkConnection = () => {
+      if (ton.account) {
+        setAddress(ton.account.address)
         setIsConnected(true)
-        
-        // Note: TON doesn't have a simple balance query like other chains
-        // You'd typically need to call a RPC endpoint
-        setBalance(null)
       } else {
         setAddress(null)
-        setBalance(null)
         setIsConnected(false)
       }
-    })
-
-    // Check initial state
-    if (ton.account) {
-      setAddress(ton.account.address)
-      setIsConnected(true)
     }
-
-    return () => {
-      unsubscribe()
-    }
+    
+    checkConnection()
+    
+    // Poll for changes every 2 seconds
+    const interval = setInterval(checkConnection, 2000)
+    
+    return () => clearInterval(interval)
   }, [ton])
 
-  // State
-  const state: TonWalletState = useMemo(() => ({
+  const state = useMemo<TonWalletState>(() => ({
     isConnected,
     address,
     balance,
-    chain: 'ton',
   }), [isConnected, address, balance])
 
-  // Connect
   const connect = useCallback(async () => {
     try {
-      // Get available wallets
       const walletsList = await ton.getWallets()
-      
-      // Prefer Tonkeeper, then Telegram wallets
-      let wallet = walletsList.find(w => w.name === 'Tonkeeper')
-        || walletsList.find(w => w.name === 'TonWallet')
+      const wallet = walletsList.find(w => w.name === 'Tonkeeper') 
         || walletsList[0]
       
-      if (!wallet) {
-        throw new Error('No wallet found')
-      }
-
-      // For Telegram Mini Apps, use special flow
-      if (isTelegramUrl(wallet.url)) {
-        // Telegram wallets use universal links
-        await ton.connect(wallet)
-      } else {
-        // For other wallets, use standard flow
-        await ton.connect(wallet)
-      }
+      if (!wallet) throw new Error('No wallet found')
+      await ton.connect(wallet)
     } catch (error) {
       console.error('TON connect error:', error)
       throw error
     }
   }, [ton])
 
-  // Disconnect
   const disconnect = useCallback(async () => {
     try {
       await ton.disconnect()
@@ -149,47 +118,33 @@ export function TonProvider({ children, config }: TonProviderProps) {
       setIsConnected(false)
     } catch (error) {
       console.error('TON disconnect error:', error)
-      throw error
     }
   }, [ton])
 
-  // Sign message (TON uses special format)
   const signMessage = useCallback(async (message: string): Promise<string> => {
     if (!address) throw new Error('Wallet not connected')
     
-    try {
-      // TON doesn't have a simple signMessage like EVM
-      // For authentication, you'd typically use a different approach
-      // This is a simplified version
-      const encoded = new TextEncoder().encode(message)
-      return Buffer.from(encoded).toString('base64')
-    } catch (error) {
-      console.error('TON sign error:', error)
-      throw error
-    }
+    // TON signing - simplified
+    const encoded = new TextEncoder().encode(message)
+    return Buffer.from(encoded).toString('base64')
   }, [address])
 
-  // Send transaction
-  const sendTransaction = useCallback(async (to: string, amount: string): Promise<string> => {
+  const sendTON = useCallback(async (to: string, amount: string): Promise<string> => {
     if (!address) throw new Error('Wallet not connected')
-    
-    try {
-      const transaction: SendTransactionRequest = {
-        validUntil: Math.floor(Date.now() / 1000) + 60, // 60 seconds
-        messages: [
-          {
-            address: to,
-            amount: (parseFloat(amount) * 1e9).toString(), // Convert to nanoTON
-          },
-        ],
-      }
-      
-      const result = await ton.sendTransaction(transaction)
-      return result
-    } catch (error) {
-      console.error('TON transaction error:', error)
-      throw error
+
+    const transaction = {
+      validUntil: Math.floor(Date.now() / 1000) + 60,
+      messages: [
+        {
+          address: to,
+          amount: (parseFloat(amount) * 1e9).toString(),
+        },
+      ],
     }
+    
+    const result = await ton.sendTransaction(transaction)
+    // TonConnect returns SendTransactionResponse, extract the hash
+    return result.boc
   }, [address, ton])
 
   return (
@@ -198,7 +153,7 @@ export function TonProvider({ children, config }: TonProviderProps) {
       connect,
       disconnect,
       signMessage,
-      sendTransaction,
+      sendTON,
     }}>
       {children}
     </TonContext.Provider>
@@ -217,8 +172,23 @@ export function useTonWallet() {
   return context
 }
 
+export function useTonAddress() {
+  const { state } = useTonWallet()
+  return state.address
+}
+
+export function useTonBalance() {
+  const { state } = useTonWallet()
+  return state.balance
+}
+
 // ============================================
-// Re-export
+// Utils
 // ============================================
+
+export function formatTonAddress(address: string, chars = 4): string {
+  if (!address) return ''
+  return `${address.slice(0, chars)}...${address.slice(-chars)}`
+}
 
 export { TonConnect, isTelegramUrl }

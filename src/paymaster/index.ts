@@ -110,8 +110,9 @@ export interface UserOperationResult {
 
 const ENTRYPOINT_ABI = [
   'function getUserOpHash((address sender, uint256 nonce, bytes initCode, bytes callData, uint256 callGasLimit, uint256 verificationGasLimit, uint256 preVerificationGas, uint256 maxFeePerGas, uint256 maxPriorityFeePerGas, bytes paymasterAndData, bytes signature) userOp',
-  'event UserOperationEvent(bytes32 userOpHash, address sender, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)'
-]
+  'event UserOperationEvent(bytes32 userOpHash, address sender, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)',
+  'function getNonce(address sender, uint192 key) view returns (uint256 nonce)',
+] as const
 
 // ============================================
 // Paymaster Client
@@ -221,6 +222,46 @@ export class PaymasterClient {
         verificationGasLimit: 100000n,
         preVerificationGas: 21000n,
       }
+    }
+  }
+
+  /**
+   * 获取钱包的 nonce
+   * 调用 EntryPoint 合约的 getNonce 方法
+   */
+  async getNonce(sender: string, provider?: any): Promise<bigint> {
+    try {
+      if (provider) {
+        // Use viem provider to read from contract
+        const nonce = await provider.readContract({
+          address: this.entryPoint,
+          abi: ENTRYPOINT_ABI,
+          functionName: 'getNonce',
+          args: [sender as `0x${string}`, 0n],
+        })
+        return nonce
+      }
+      
+      // Fallback: use RPC call
+      const response = await fetch(this.bundlerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_call',
+          params: [{
+            to: this.entryPoint,
+            data: `0x${sender.replace('0x', '').padStart(64, '0')}0000000000000000000000000000000000000000000000000000000000000000`
+          }, 'latest']
+        })
+      })
+      
+      const result = await response.json()
+      return BigInt(result.result)
+    } catch (error) {
+      console.error('Failed to get nonce:', error)
+      return 0n
     }
   }
 
@@ -371,8 +412,8 @@ export function PaymasterProvider({
     setIsSending(true)
 
     try {
-      // 构建 UserOperation
-      const nonce = 0n // TODO: 从合约获取真实 nonce
+      // 获取真实的 nonce
+      const nonce = await client.getNonce(address)
       
       const userOp: Partial<UserOperation> = {
         sender: address,

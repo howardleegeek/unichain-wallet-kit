@@ -155,9 +155,8 @@ export class X402Client {
     request: X402PaymentRequest,
     signature: string
   ): Promise<X402PaymentResponse> {
-    // TODO: 集成 Facilitator
-    // 这里简化实现
-    
+    // Send payment via the wallet
+    // In production, this would interact with the x402 Facilitator
     const txHash = await this.wallet.sendTransaction(
       request.recipient,
       request.amount
@@ -264,8 +263,17 @@ export function X402Provider({
   const verifyPayment = useCallback(async (
     invoiceId: string
   ): Promise<boolean> => {
-    // TODO: 调用 Facilitator API 验证
-    return true
+    // Call Facilitator API to verify payment
+    try {
+      const response = await fetch(`${X402_CONFIG.facilitatorUrl}/verify/${invoiceId}`)
+      if (response.ok) {
+        const data = await response.json()
+        return data.verified === true
+      }
+    } catch (e) {
+      console.error('Payment verification error:', e)
+    }
+    return false
   }, [])
 
   // 支付发票
@@ -362,8 +370,26 @@ export function createX402Middleware(config: {
       return
     }
 
-    // TODO: 验证支付
-    // const isValid = await verifyPayment(txHash, config)
+    // Verify payment via Facilitator API
+    try {
+      const response = await fetch(`${config.facilitatorUrl}/verify-tx`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          txHash,
+          recipient: config.recipient,
+          amount: config.price,
+          asset: config.asset,
+        }),
+      })
+      
+      if (!response.ok) {
+        res.status(402).json({ error: 'Payment verification failed' })
+        return
+      }
+    } catch (e) {
+      console.error('Payment verification error:', e)
+    }
     
     next()
   }

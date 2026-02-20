@@ -220,7 +220,7 @@ export function MiniConnectButton({ className = '' }: MiniConnectButtonProps) {
     return (
       <button
         className={className}
-        onClick={connect}
+        onClick={() => connect()}
         style={{
           padding: '6px 12px',
           borderRadius: '6px',
@@ -240,7 +240,7 @@ export function MiniConnectButton({ className = '' }: MiniConnectButtonProps) {
   return (
     <button
       className={className}
-      onClick={connect}
+      onClick={() => connect()}
       style={{
         padding: '6px 12px',
         borderRadius: '6px',

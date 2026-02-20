@@ -254,5 +254,13 @@ export function useChain() {
   return chain
 }
 
-// Export context for advanced use
-export { WalletContext }
+// ============================================
+// Utility Functions
+// ============================================
+
+export function formatAddress(address: string, chars: number = 4): string {
+  if (!address) return ''
+  return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
+}
+
+

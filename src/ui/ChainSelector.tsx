@@ -157,7 +157,7 @@ export function ChainSelector({
                 <ChainItem
                   key={`evm-${chain.id}`}
                   chain={chain}
-                  isActive={state.chainId === chain.id && chain === 'evm'}
+                  isActive={state.chainId === chain.id && chain.type === 'evm'}
                   showIcon={showIcons}
                   onClick={() => handleSelectChain(chain)}
                 />
@@ -181,7 +181,7 @@ export function ChainSelector({
                 <ChainItem
                   key={`solana-${chain.id}`}
                   chain={chain}
-                  isActive={state.chainId === chain.id && chain === 'solana'}
+                  isActive={state.chainId === chain.id && chain.type === 'solana'}
                   showIcon={showIcons}
                   onClick={() => handleSelectChain(chain)}
                 />
@@ -205,7 +205,7 @@ export function ChainSelector({
                 <ChainItem
                   key={`ton-${chain.id}`}
                   chain={chain}
-                  isActive={state.chainId === chain.id && chain === 'ton'}
+                  isActive={state.chainId === chain.id && chain.type === 'ton'}
                   showIcon={showIcons}
                   onClick={() => handleSelectChain(chain)}
                 />
