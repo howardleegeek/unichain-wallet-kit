@@ -100,6 +100,61 @@ export {
 } from './ton'
 
 // ============================================
+// Agent Wallet Module (AI Agent)
+// ============================================
+
+export {
+  AgentWalletProvider,
+  useAgentWallet,
+  createDefaultPolicy,
+  validateTransaction,
+  type AgentWalletProviderProps,
+  type AgentWalletState,
+  type AgentConfig,
+  type AgentPolicy,
+  type AgentChainType,
+  type TransactionRequest,
+  type TransactionResult,
+} from './agent'
+
+export {
+  AgentActions,
+  createAgentActions,
+  getLangChainTools,
+  getOpenAITools,
+  type AgentActionType,
+  type TransferParams,
+  type SwapParams,
+  type BridgeParams,
+  type ApproveParams,
+  type CallParams,
+  type ActionResult,
+  type BalanceInfo,
+  type WalletInfo,
+  type LangChainTool,
+  type OpenAITool,
+} from './agent/actions'
+
+// ============================================
+// x402 Payment Module
+// ============================================
+
+export {
+  X402Provider,
+  useX402,
+  X402Client,
+  createX402Middleware,
+  getExplorerUrl,
+  formatAmount,
+  type X402Chain,
+  type X402Asset,
+  type X402PaymentRequest,
+  type X402PaymentResponse,
+  type X402Invoice,
+  type X402FacilitatorConfig,
+} from './agent/x402'
+
+// ============================================
 // Version
 // ============================================
 
