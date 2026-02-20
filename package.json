@@ -1,0 +1,58 @@
+{
+  "name": "unichain-wallet-kit",
+  "version": "1.0.0",
+  "description": "Unified multi-chain wallet SDK - EVM, Solana, TON",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-wallets": "^0.19.26",
+    "@solana/web3.js": "^1.91.0",
+    "@tonconnect/sdk": "^3.0.0",
+    "viem": "^2.7.0",
+    "wagmi": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "wallet",
+    "ethereum",
+    "solana",
+    "ton",
+    "web3",
+    "crypto",
+    "react",
+    "wagmi"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oyster-labs/unichain-wallet-kit"
+  }
+}
